@@ -1,0 +1,66 @@
+---
+title: "Readin_Textgrids"
+author: "Jason Geller"
+date: "1/17/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      message=FALSE, 
+                      warning=FALSE)
+```
+
+
+```{r packages}
+library(tidyverse)
+library(rPraat)
+library(here)
+
+```
+
+
+```{r textgrids}
+
+inputFolder <- here::here("textgrids")
+
+listFiles <- list.files(path = inputFolder, pattern = "\\.TextGrid$" , ignore.case = TRUE)
+
+grids=list() # save textgrids to list called grids 
+for (I in seq_along(listFiles)) {
+    file <- listFiles[I]
+    fileName <- substr(file, 1, nchar(file) - nchar(".TextGrid"))
+    
+    fileTextGrid <- paste0(inputFolder, "/", fileName, ".TextGrid")
+    # filePitchTier <- paste0(inputFolder, "/", fileName, ".PitchTier")
+    # filePitch <- paste0(inputFolder, "/", fileName, ".Pitch")
+    # fileIntensityTier <- paste0(inputFolder, "/", fileName, ".IntensityTier")
+    # fileFormant <- paste0(inputFolder, "/", fileName, ".Formant")
+    # fileSound <- paste0(inputFolder, "/", fileName, ".wav")
+    # fileCollection <- paste0(inputFolder, "/", fileName, ".Collection")
+    
+    grids[I] <- tg.read(fileTextGrid)
+    # pt <- pt.read(filePitchTier)
+    # pitch <- pt.read(filePitch)
+    # it <- it.read(fileIntensityTier)
+    # formant <- formant.read(fileFormant)
+    # snd <- snd.read(fileSound)
+    # col <- col.read(fileCollection)
+    # ...
+    
+    # ... process tg, pt, pitch, it, formant, snd, col...
+}
+
+
+```
+
+Seems that each textgrid file contains over 20 minutes of speech smaples. Ahhhh!!!
+
+
+```{r}
+
+tg.plot()
+
+
+
+```
