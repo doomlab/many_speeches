@@ -25,7 +25,9 @@ library(here)
 inputFolder <- here::here("textgrids")
 
 listFiles <- list.files(path = inputFolder, pattern = "\\.TextGrid$" , ignore.case = TRUE)
-x <- list()
+
+x <- list() # store textgrids as a list for each P
+
 for (I in seq_along(listFiles)) {
     file <- listFiles[I]
     fileName <- substr(file, 1, nchar(file) - nchar(".TextGrid"))
@@ -38,7 +40,7 @@ for (I in seq_along(listFiles)) {
     # fileSound <- paste0(inputFolder, "/", fileName, ".wav")
     # fileCollection <- paste0(inputFolder, "/", fileName, ".Collection")
     
-     x[[paste0("elemnet", file)]] <- tg.read(fileTextGrid)
+     x[[paste0("elemnet", file)]] <- textgrid_to_df(fileTextGrid)
     # pt <- pt.read(filePitchTier)
     # pitch <- pt.read(filePitch)
     # it <- it.read(fileIntensityTier)
@@ -54,10 +56,12 @@ for (I in seq_along(listFiles)) {
 #x
 ```
 
-Seems that each textgrid file contains over 20 minutes of speech samples. Ahhhh!!!
-
-
 ```{r}
+
+library(phonfieldwork)
+
+
+
 
 
 
