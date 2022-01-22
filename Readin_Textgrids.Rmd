@@ -13,9 +13,11 @@ knitr::opts_chunk$set(echo = TRUE,
 
 
 ```{r packages}
+install.package("phonfieldwork")
 library(tidyverse)
 library(rPraat)
 library(here)
+library(phonfieldwork)
 
 ```
 
@@ -55,14 +57,14 @@ for (I in seq_along(listFiles)) {
 
 #x
 ```
-
+# Unlist
 ```{r}
 
-library(phonfieldwork)
+library(data.table)
 
+text_unlist <- rbindlist(x)
 
-
-
+head(text_unlist)
 
 
 
