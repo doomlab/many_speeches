@@ -58,8 +58,14 @@ Seems that each textgrid file contains over 20 minutes of speech samples. Ahhhh!
 
 
 ```{r}
+# capital is noun, appears adjectives are colors 
+# just look at noun focus trials 
 
-
+# dv is intensity 
+# participant level 1
+# item is level 2
+# random slope of typicality 
+# fixed effects of typicality
 
 
 ```
