@@ -1,3 +1,7 @@
+# large folder
+/audio
+/trial-lists
+
 # History files
 .Rhistory
 .Rapp.history
@@ -37,3 +41,4 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+.DS_Store
