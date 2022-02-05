@@ -27,7 +27,7 @@ library(PraatR)
 
 ## Functions
 
-```{r}
+```{r functions}
 # source https://marissabarlaz.github.io/portfolio/praatfns/
 
 create_praat_files <- function(absdir, pitch = TRUE, formant = TRUE, intensity = TRUE){
@@ -205,15 +205,17 @@ for (j in 1:length(mydir)){
 }
 ```
 
-## Import Data
+## Import and Process Data
 
-```{r}
+This section creates the `praat` files to analyze intensity across the provided audio from the team. The TextGrid files are merged with this data to align at the utterance level. We chose to select the highest intensity points at the approximate millisecond level. The avearge time for trials was 3-5 seconds, and therefore we chose to go with more sensitity by selection 5000 analysis points for intensity. 
+
+```{r praat-calc}
 absdir <- here::here("audio")
 
 create_praat_files(absdir, pitch = FALSE, formant = FALSE, intensity = TRUE)
 
 intensity_files <- get_acoustic_data(absdir, tiername = "Condition", 
-                                     numpoints = 10, pitch = FALSE, 
+                                     numpoints = 5000, pitch = FALSE, 
                                      formant = FALSE, intensity = TRUE, 
                                      remove_files = FALSE)
 
@@ -224,7 +226,9 @@ intensity_files$filename <- gsub(".wav", "", intensity_files$filename)
 
 ## Merge with Trial Information
 
-```{r}
+We use the trial-lists data to merge in information about the typicality for each randomized trial for speakers. 
+
+```{r trial-merge}
 # grab the trial-lists folder
 inputFolder <- here::here("trial-lists")
 
@@ -249,95 +253,94 @@ intensity_final <- merge(intensity_files,
                          trial_DF, 
                          by = "unique_trial", 
                          all.x = T)
+```
 
-write.csv(intensity_final, "intensity_df.csv", row.names = F)
+## Subset the Data
+
+- First only collect the noun-focus trials 
+- Pick the max intensity for each trial-speaker combination
+- Ensure we have a proper number of total trials (15 trials by 2 repeats for each speaker)
+
+```{r subset-data}
+# just look at noun focus trials
+intensity_DF <- subset(intensity_final, label == "NF")
+
+# pick the max intensity for each trial 
+intensity_DF <- intensity_DF %>% 
+  group_by(unique_trial) %>% 
+  mutate(max_intensity = max(Intensity)) %>% 
+  ungroup() %>%
+  filter(max_intensity == Intensity)
+
+# remove duplicate max values
+# the columns of the time selected are what's not repeating 
+# but they have the same max values as the adjacent times
+norm_columns <- grep("norm", colnames(intensity_DF))
+intensity_DF <- intensity_DF[!duplicated(intensity_DF[ , -norm_columns ]), ]
+
+# ensure information we have is good
+# 15 sentences (trial) times 2 times each = 30 trials 
+table(intensity_DF$filename)
+
+# 15 sentences by 2 times by 30 people = 900 rows
+nrow(intensity_DF)
+
+# write out for others to check without praat
+write.csv(intensity_DF, "intensity_df.csv", row.names = F)
 ```
 
 ## Analyze the Data
 
-```{r}
-# just look at noun focus trials
-intensity_DF <- subset(intensity_final, label == "NF")
+- Run the analysis:
+  - Multilevel model using REML estimation with `nlme`
+  - DV is peak intensity
+  - IV is typicality treated as a continuous variable with `typ_mean` from trial list data
+  - Random cross classified intercepts with participants nested in trials 
+  - Random slope of typicality
+  
+```{r testing}
+# change to true if you want to just test the bottom here 
+testing <- F
 
-# probably have to pick the highest intensity for each combination? 
+if (testing) {
+  intensity_DF <- read.csv("intensity_DF.csv")
+}
+```
 
-table(intensity_DF$typicality, useNA = "ifany")
-
-# dv is intensity
+```{r run-mlm}
+# dv is intensity peak from trial
 # participant level 1
-# item is level 2
-# random slope of typicality
-# fixed effects of typicality
+# trial is level 2
+# random slope of typicality as continuous variable
+# fixed effects of typicality as continuous variable
 
-intensity_model <- lme(Intensity ~ typicality, 
+intensity_model <- lme(Intensity ~ typ_mean, 
                        data = intensity_DF,
-                       random = ~typicality | RepNo/filename)
+                       random = ~ typ_mean | target_name/filename)
 
 summary(intensity_model)
 ```
 
+## Investigate Results / Data Screening
 
+```{r examine-ds}
+resids <- residuals(intensity_model, type = "normalized")
 
+# normal
+hist(resids)
 
-## Hanging on to the code in case we need it 
+# linear
+{qqnorm(resids); abline(0,1)}
 
-```{r textgrids}
+# homoscedastic
+{plot(scale(fitted(intensity_model)), resids); abline(v = 0); abline(h = 0)}
 
-# put the textgrids in a textgrids folder 
-inputFolder <- here::here("textgrids")
+# typicality as a mean 
+tapply(intensity_DF$Intensity, intensity_DF$typicality, mean)
 
-# find all the textgrid files within that folder 
-listFiles <- list.files(path = inputFolder, 
-                        pattern = "\\.TextGrid$" , ignore.case = TRUE)
-
-# store textgrids as a list for each participant 
-x <- list() 
-
-# loop over the files and import the text grid 
-for (I in seq_along(listFiles)) {
-    file <- listFiles[I]
-    fileName <- substr(file, 1, nchar(file) - nchar(".TextGrid"))
-
-    fileTextGrid <- paste0(inputFolder, "/", fileName, ".TextGrid")
-    # filePitchTier <- paste0(inputFolder, "/", fileName, ".PitchTier")
-    # filePitch <- paste0(inputFolder, "/", fileName, ".Pitch")
-    # fileIntensityTier <- paste0(inputFolder, "/", fileName, ".IntensityTier")
-    # fileFormant <- paste0(inputFolder, "/", fileName, ".Formant")
-    # fileSound <- paste0(inputFolder, "/", fileName, ".wav")
-    # fileCollection <- paste0(inputFolder, "/", fileName, ".Collection")
-
-     x[[paste0("elemnet", file)]] <- textgrid_to_df(fileTextGrid)
-    # pt <- pt.read(filePitchTier)
-    # pitch <- pt.read(filePitch)
-    # it <- it.read(fileIntensityTier)
-    # formant <- formant.read(fileFormant)
-    # snd <- snd.read(fileSound)
-    # col <- col.read(fileCollection)
-    # ...
-
-    # ... process tg, pt, pitch, it, formant, snd, col...
-}
-
-#x
+# typicality versus intensity
+plot(intensity_DF$typ_mean, intensity_DF$Intensity)
 ```
 
-# Unlist
 
-```{r}
 
-library(data.table)
-
-# capital is noun, appears adjectives are colors
-# just look at noun focus trials
-
-# dv is intensity
-# participant level 1
-# item is level 2
-# random slope of typicality
-# fixed effects of typicality
-
-text_unlist <- rbindlist(x)
-
-head(text_unlist)
-
-```
