@@ -26,7 +26,6 @@ These libraries are required to complete the following analyses.
 library(tidyverse)
 library(rPraat)
 library(here)
-library(nlme)
 library(report) # magic for reporting
 library(performance) # magic for model checks
 library(lme4)
@@ -35,7 +34,8 @@ library(PraatR)
 library(Cairo) # save pdf figures
 #remotes::install_github("Pakillo/grateful")
 library(grateful) # cite the packages we use
-
+library(MBESS)
+library(report)
 ```
 
 ## Functions
@@ -313,16 +313,6 @@ write.csv(intensity_DF, "intensity_df.csv", row.names = F)
   - IV is typicality treated as a continuous variable with `typ_mean` from trial list data
   - Random cross classified intercepts with participants nested in trials 
   - Random slope of typicality
-  
-```{r testing}
-# change to true if you want to just test the bottom here 
-testing <- F
-
-if (testing) {
-  intensity_DF <- read.csv("intensity_DF.csv")
-}
-```
-
 
 ```{r run-mlm}
 # dv is intensity peak from trial
@@ -345,12 +335,16 @@ summary(intensity_model_lmer)
 ### Results
 
 ```{r}
-library(report)
-
 report(intensity_model_lmer)
-
 ```
-## Assumption Checks
+
+### Effect Size
+
+```{r}
+ci.R2(1.31e-07, N = 900, p = .982)
+```
+
+### Assumption Checks
 
 For the most part, it looks like the assumptions are met.
 
@@ -360,12 +354,10 @@ performance::check_model(intensity_model_lmer)
 
 
 ggsave(here::here("figures", "model_diagnostics.pdf"), width = 9, height = 8, device = cairo_pdf)
-
 ```
 
 ```{r}
 cite_packages(output = "paragraph")
-
 ```
 
 
