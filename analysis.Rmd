@@ -15,8 +15,7 @@ knitr::opts_chunk$set(echo = TRUE,
 ```
 # Introduction
 
-This document contains the functions and code to analyze the data from the Many Speech Analyses Project. Because of the size of the audio files and how long it takes, we skip the extraction part here, however, all the files needed to reproduce this can be executed on your local computer or via the Code Ocean container. 
-
+This document contains the functions and code to analyze the data from the Many Speech Analyses Project. Because of the size of the audio files and how long it takes, we skip the extraction part here, however, all the files needed to reproduce this can be executed on your local computer. 
 
 ## Libraries
 
@@ -39,6 +38,8 @@ library(report)
 ```
 
 ## Functions
+
+## You will need to download the audio files from the main project OSF. 
 
 ```{r functions, eval=FALSE}
 # source https://marissabarlaz.github.io/portfolio/praatfns/
@@ -147,7 +148,12 @@ for (j in 1:length(mydir)){
   CurTextGrid = data.frame(filename = mydir[j], 
                            tmin = TextGridInfo[[tiername]]$t1, 
                            tmax = TextGridInfo[[tiername]]$t2, 
-                           label = TextGridInfo[[tiername]]$label) %>% filter(label !="")
+                           label = TextGridInfo[[tiername]]$label, 
+                           label_error=TextGridInfo[["notes"]]$label)
+  
+  CurTextGrid <- CurTextGrid %>%
+    filter(label!="") %>% 
+    filter(label_error!="error") # remove error notes
   
   if (numpoints == 1){
     CurTextGrid = CurTextGrid %>% mutate(normtime = 0.5, acttimenorm = (tmin+tmax)/2)
@@ -201,12 +207,10 @@ for (j in 1:length(mydir)){
   CurTextGrid$B5 = map(mywhichptformant, function(x) FormantInfo$`B5(Hz)`[x])
   
   
-  CurTextGrid = CurTextGrid %>% mutate_at(.vars = c("F1", "B1","F2", "B2","F3", "B3","F4", "B4","F5", "B5"), .funs = ~ as.numeric(na_if(., "--undefined--")))
+  CurTextGrid = CurTextGrid %>% mutate_at(.vars = c("F1", "B1","F2", "B2","F3", "B3","F4", "B4","F5", "B5"), .funs = ~ as.numeric(na_if(., "--und89efined--")))
   if (remove_files==TRUE) file.remove(curformant, curformanttable)
   
   }
-  
-  
   
   
   alltextgrids2[[j]] = CurTextGrid
@@ -230,13 +234,12 @@ create_praat_files(absdir, pitch = FALSE, formant = FALSE, intensity = TRUE)
 intensity_files <- get_acoustic_data(absdir, tiername = "Condition", 
                                      numpoints = 5000, pitch = FALSE, 
                                      formant = FALSE, intensity = TRUE, 
-                            ‹         remove_files = FALSE)
+                                     remove_files = FALSE)
 
 intensity_files$filename <- gsub(absdir, "", intensity_files$filename)
 intensity_files$filename <- gsub("\\/", "", intensity_files$filename)
 intensity_files$filename <- gsub(".wav", "", intensity_files$filename)
 ```
-
 ## Merge with Trial Information
 
 We use the trial-lists data to merge in information about the typicality for each randomized trial for speakers. 
@@ -276,7 +279,7 @@ intensity_final <- merge(intensity_files,
 
 ```{r subset-data, eval=FALSE}
 
-intensity_final <- read_csv(here::here("intensity_df.csv")) # load this is in
+#intensity_final <- read_csv(here::here("intensity_df.csv")) # load this is in
 
 # just look at noun focus trials
 intensity_DF <- subset(intensity_final, label == "NF")
@@ -308,7 +311,7 @@ write.csv(intensity_DF, "intensity_df.csv", row.names = F)
 ## Analyze the Data
 
 ### Run the analysis:
-  - Multilevel model using REML estimation with `nlme`
+  - Multilevel model using REML estimation with `lmer`
   - DV is peak intensity
   - IV is typicality treated as a continuous variable with `typ_mean` from trial list data
   - Random cross classified intercepts with participants nested in trials 
@@ -351,7 +354,6 @@ For the most part, it looks like the assumptions are met.
 ```{r model_performance}
 
 performance::check_model(intensity_model_lmer)
-
 
 ggsave(here::here("figures", "model_diagnostics.pdf"), width = 9, height = 8, device = cairo_pdf)
 ```
